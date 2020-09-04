@@ -57,21 +57,21 @@ main:
 			jnz r_continue1
 				cmp bx, 0
 				jz r_continue1
-						mov dx, 0
-						pop ax
-						div ten
-						push ax
+                    mov dx, 0
+                    pop ax
+                    div ten
+                    push ax
 
-						mov ah, 02h
-						mov dl, 8
-						int 21h
-						mov dl, 32
-						int 21h
-						mov dl, 8
-						int 21h
+                    mov ah, 02h
+                    mov dl, 8
+                    int 21h
+                    mov dl, 32
+                    int 21h
+                    mov dl, 8
+                    int 21h
 
-						dec bx
-						jmp r_cycle1
+                    dec bx
+                    jmp r_cycle1
 			r_continue1:
 
 			cmp cl, 27
