@@ -25,7 +25,7 @@ main:
 			jnz w_cycle1
 
 		w_cycle2:
-			mov ax, 0200h
+			mov ah, 02h
 			pop dx
 			add dx, '0'
 			int 21h
