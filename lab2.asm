@@ -105,7 +105,6 @@ main:
 				jz r_enter_pressed
 			r_continue4:
    
-            
             pop ax
             cmp ax, 0
             push ax
@@ -134,6 +133,7 @@ main:
 			add ax, cx
 			jnc r_continue7
 				sub ax, cx
+                div ten
 				push ax
 				jmp r_cycle1
 			r_continue7:
