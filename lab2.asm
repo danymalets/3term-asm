@@ -57,21 +57,21 @@ main:
 			jnz r_continue1
 				cmp bx, 0
 				jz r_continue1
-                    mov dx, 0
-                    pop ax
-                    div ten
-                    push ax
+					mov dx, 0
+					pop ax
+					div ten
+					push ax
 
-                    mov ah, 02h
-                    mov dl, 8
-                    int 21h
-                    mov dl, 32
-                    int 21h
-                    mov dl, 8
-                    int 21h
+					mov ah, 02h
+					mov dl, 8
+					int 21h
+					mov dl, 32
+					int 21h
+					mov dl, 8
+					int 21h
 
-                    dec bx
-                    jmp r_cycle1
+					dec bx
+					jmp r_cycle1
 			r_continue1:
 
 			cmp cl, 27
@@ -104,15 +104,15 @@ main:
 			cmp cl, 13
 				jz r_enter_pressed
 			r_continue4:
-   
-            pop ax
-            cmp ax, 0
-            push ax
-            jnz r_continue5
-                cmp bx, 1
-                jnz r_continue5
-                    jmp r_cycle1
-            r_continue5:
+
+pop ax
+cmp ax, 0
+push ax
+jnz r_continue5
+cmp bx, 1
+jnz r_continue5
+jmp r_cycle1
+r_continue5:
 
 			sub cl, '0'
 			jc r_cycle1
@@ -133,7 +133,7 @@ main:
 			add ax, cx
 			jnc r_continue7
 				sub ax, cx
-                div ten
+				div ten
 				push ax
 				jmp r_cycle1
 			r_continue7:
