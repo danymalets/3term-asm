@@ -135,7 +135,6 @@ main:
 					jmp r_cycle1
 			r_continue6:
 
-
 			cmp cl, 13
 			jnz r_continue7
 				cmp bx, 0
