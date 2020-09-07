@@ -14,20 +14,19 @@ main:
 	write_signed_num PROC
 		push cx
 		push dx
-  
-        test ax, 8000h
-        
-        jz w_continue1
-            neg ax
-            push ax
-            
-            mov ah, 02h
-            mov dl, '-'
-            int 21h
-            
-            pop ax
-        w_continue1:
-        
+
+				test ax, 8000h
+
+				jz w_continue1
+					neg ax
+						push ax
+
+						mov ah, 02h
+						mov dl, '-'
+						int 21h
+
+						pop ax
+				w_continue1:
 		mov cx, 0
 		w_cycle1:
 			mov dx, 0
@@ -55,12 +54,12 @@ main:
 		push bx
 		push cx
 		push dx
-        push si
+		push si
 
 		mov bx, 0
 		push 0
 		mov ch, 0
-        mov si, 0
+		mov si, 0
 
 		r_cycle1:
 			mov ah, 08h
@@ -70,39 +69,38 @@ main:
 
 			cmp cl, 8
 			jnz r_continue1
-                cmp bx, 1
-                jnz r_continue222
-                    mov si, 0
-                r_continue222:
-                
-				cmp bx, 0
+				cmp bx, 1
+				jnz r_continue2
+					mov si, 0
+				r_continue2:
+					cmp bx, 0
 				jz r_continue1
-                    mov dx, 0
-                    pop ax
-                    div ten
-                    push ax
+					mov dx, 0
+					pop ax
+					div ten
+					push ax
 
-                    mov ah, 02h
-                    mov dl, 8
-                    int 21h
-                    mov dl, 32
-                    int 21h
-                    mov dl, 8
-                    int 21h
+					mov ah, 02h
+					mov dl, 8
+					int 21h
+					mov dl, 32
+					int 21h
+					mov dl, 8
+					int 21h
 
-                    dec bx
-                    jmp r_cycle1
+					dec bx
+					jmp r_cycle1
 			r_continue1:
 
 			cmp cl, 27
-			jnz r_continue2
+			jnz r_continue3
 				pop ax
 				push 0
-                mov si, 0
+				mov si, 0
 
 				r_cycle2:
 					cmp bx, 0
-					jz r_continue3
+					jz r_continue4
 					dec bx
 					mov ah, 02h
 					mov dl, 8
@@ -112,57 +110,53 @@ main:
 					mov dl, 8
 					int 21h
 					jmp r_cycle2
-				r_continue3:
+				r_continue4:
 
 				mov ah, 02h
 				mov dl, 8
 
 				jmp r_cycle1
-			r_continue2:
-   
-   
-            jmp r_continue22
-                r_cycle1_a:
-                jmp r_cycle1
-            r_continue22:
-   
-            cmp cl, '-'
-            jnz r_continue44
-                cmp bx, 0
-                jnz r_cycle1
-                    
-                mov ah, 02h
-                mov dl, '-'
-                int 21h
-                inc bx
-                mov si, 1
-                
-                jnp r_cycle1
-            r_continue44:
+			r_continue3:
+
+
+			jmp r_continue5
+				r_cycle1_a:
+				jmp r_cycle1
+			r_continue5:
+
+			cmp cl, '-'
+			jnz r_continue6
+				cmp bx, 0
+				jnz r_cycle1
+					mov ah, 02h
+					mov dl, '-'
+					int 21h
+					inc bx
+					mov si, 1
+					jmp r_cycle1
+			r_continue6:
 
 			cmp bx, 0
-			jz r_continue4
-			cmp cl, 13
-				jz r_enter_pressed
-			r_continue4:
-            
-            cmp si, 0
-            jnz r_continue5
-                pop ax
-                cmp ax, 0
-                push ax
-                jnz r_continue66
-                    cmp bx, 1
-                    jnz r_continue66
-                        jmp r_cycle1_a
-            r_continue5:
-                cmp cl, '0'
-                jnz r_continue66
-                    cmp bx, 1
-                    jnz r_continue66
-                        jmp r_cycle1_a
-            r_continue66:
-            
+			jz r_continue7
+				cmp cl, 13
+					jz r_enter_pressed
+			r_continue7:
+
+			cmp si, 0
+			jnz r_continue8
+				pop ax
+				cmp ax, 0
+				push ax
+				jnz r_continue9
+					cmp bx, 1
+					jnz r_continue9
+						jmp r_cycle1_a
+			r_continue8:
+				cmp cl, '0'
+				jnz r_continue9
+					cmp bx, 1
+					jz r_cycle1_a
+			r_continue9:
 
 			sub cl, '0'
 			jc r_cycle1_a
@@ -174,32 +168,32 @@ main:
 			mov dx, 0
 
 			mul ten
-			jnc r_continue6
+			jnc r_continue10
 				div ten
 				push ax
 				jmp r_cycle1_a
-			r_continue6:
-   
-            test ax, 8000h
-            jz r_continue666
-                div ten
-                push ax
-                jmp r_cycle1_a
-            r_continue666:
+			r_continue10:
 
-			add ax, cx
-            test ax, 8000h
-			jz r_continue7
-                cmp si, 0
-                jz r_continue77
-                    cmp ax, 8000h
-                    jz r_continue7
-                r_continue77:
-				sub ax, cx
-                div ten
+			test ax, 8000h
+			jz r_continue11
+				div ten
 				push ax
 				jmp r_cycle1_a
-			r_continue7:
+			r_continue11:
+
+			add ax, cx
+			test ax, 8000h
+			jz r_continue12
+				cmp si, 0
+				jz r_continue13
+					cmp ax, 8000h
+					jz r_continue12
+				r_continue13:
+					sub ax, cx
+					div ten
+					push ax
+					jmp r_cycle1_a
+			r_continue12:
 
 			push ax
 
@@ -219,13 +213,13 @@ main:
 		int 21h
 
 		pop ax
-  
-        cmp si, 0
-        jz r_continue8
-            neg ax
-        r_continue8:
-        
-        pop si
+
+		cmp si, 0
+		jz r_continue14
+			neg ax
+		r_continue14:
+
+		pop si
 		pop dx
 		pop cx
 		pop bx
@@ -259,7 +253,7 @@ main:
 			mov dx, 0
 			mov ax, a
 			mov bx, b
-            cwd
+			cwd
 			idiv b
 			mov bx, dx
 
