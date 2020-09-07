@@ -135,10 +135,15 @@ main:
 					jmp r_cycle1
 			r_continue6:
 
-			cmp bx, 0
-			jz r_continue7
-				cmp cl, 13
-					jz r_enter_pressed
+
+			cmp cl, 13
+			jnz r_continue7
+				cmp bx, 0
+				jz r_continue7
+				cmp bx, 1
+				jnz r_enter_pressed
+				cmp si, 0
+				jz r_enter_pressed
 			r_continue7:
 
 			cmp si, 0
