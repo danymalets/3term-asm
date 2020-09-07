@@ -15,18 +15,17 @@ main:
 		push cx
 		push dx
 
-				test ax, 8000h
+		test ax, 8000h
+		jz w_continue1
+			neg ax
+			push ax
+			mov ah, 02h
+			mov dl, '-'
+			int 21h
 
-				jz w_continue1
-					neg ax
-						push ax
+			pop ax
+		w_continue1:
 
-						mov ah, 02h
-						mov dl, '-'
-						int 21h
-
-						pop ax
-				w_continue1:
 		mov cx, 0
 		w_cycle1:
 			mov dx, 0
