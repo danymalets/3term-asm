@@ -105,14 +105,14 @@ main:
 				jz r_enter_pressed
 			r_continue4:
 
-pop ax
-cmp ax, 0
-push ax
-jnz r_continue5
-cmp bx, 1
-jnz r_continue5
-jmp r_cycle1
-r_continue5:
+			pop ax
+			cmp ax, 0
+			push ax
+			jnz r_continue5
+				cmp bx, 1
+				jnz r_continue5
+					jmp r_cycle1
+			r_continue5:
 
 			sub cl, '0'
 			jc r_cycle1
