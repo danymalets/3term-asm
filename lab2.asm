@@ -54,9 +54,9 @@ main:
 			mov cl, al
 
 			cmp cl, 8
-			jnz r_continue1
+			jnz r_check_esc
 				cmp bx, 0
-				jz r_continue1
+				jz r_check_esc
 					mov dx, 0
 					pop ax
 					div ten
@@ -72,16 +72,16 @@ main:
 
 					dec bx
 					jmp r_cycle1
-			r_continue1:
+			r_check_esc:
 
 			cmp cl, 27
-			jnz r_continue2
+			jnz r_check_empty_str
 				pop ax
 				push 0
 
 				r_cycle2:
 					cmp bx, 0
-					jz r_continue3
+					jz r_echo_symbol
 					dec bx
 					mov ah, 02h
 					mov dl, 8
@@ -91,28 +91,28 @@ main:
 					mov dl, 8
 					int 21h
 					jmp r_cycle2
-				r_continue3:
+				r_echo_symbol:
 
 				mov ah, 02h
 				mov dl, 8
 
 				jmp r_cycle1
-			r_continue2:
+			r_check_empty_str:
 
 			cmp bx, 0
-			jz r_continue4
+			jz r_check0
 			cmp cl, 13
 				jz r_enter_pressed
-			r_continue4:
+			r_check0:
 
 			pop ax
 			cmp ax, 0
 			push ax
-			jnz r_continue5
+			jnz r_sub0
 				cmp bx, 1
-				jnz r_continue5
+				jnz r_sub0
 					jmp r_cycle1
-			r_continue5:
+			r_sub0:
 
 			sub cl, '0'
 			jc r_cycle1
@@ -124,19 +124,19 @@ main:
 			mov dx, 0
 
 			mul ten
-			jnc r_continue6
+			jnc r_addnum
 				div ten
 				push ax
 				jmp r_cycle1
-			r_continue6:
+			r_addnum:
 
 			add ax, cx
-			jnc r_continue7
+			jnc r_finish
 				sub ax, cx
 				div ten
 				push ax
 				jmp r_cycle1
-			r_continue7:
+			r_finish:
 
 			push ax
 
@@ -202,12 +202,12 @@ main:
 			mov ax, bx
 			call write_num
 
-			jmp continue
+			jmp finish
 		if0:
 			mov ah, 09h
 			lea dx, err
 			int 21h
-		continue:
+		finish:
 
 		mov ax, 4c00h
 		int 21h

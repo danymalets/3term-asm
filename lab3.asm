@@ -16,7 +16,7 @@ main:
 		push dx
 
 		test ax, 8000h
-		jz w_continue1
+		jz w_go_to_cycle
 			neg ax
 			push ax
 			mov ah, 02h
@@ -24,7 +24,7 @@ main:
 			int 21h
 
 			pop ax
-		w_continue1:
+		w_go_to_cycle:
 
 		mov cx, 0
 		w_cycle1:
@@ -67,13 +67,13 @@ main:
 			mov cl, al
 
 			cmp cl, 8
-			jnz r_continue1
+			jnz r_check_esc
 				cmp bx, 1
-				jnz r_continue2
+				jnz r_check_empty
 					mov si, 0
-				r_continue2:
+				r_check_empty:
 					cmp bx, 0
-				jz r_continue1
+				jz r_check_esc
 					mov dx, 0
 					pop ax
 					div ten
@@ -89,17 +89,17 @@ main:
 
 					dec bx
 					jmp r_cycle1
-			r_continue1:
+			r_check_esc:
 
 			cmp cl, 27
-			jnz r_continue3
+			jnz r_check_minus
 				pop ax
 				push 0
 				mov si, 0
 
 				r_cycle2:
 					cmp bx, 0
-					jz r_continue4
+					jz r_write_char
 					dec bx
 					mov ah, 02h
 					mov dl, 8
@@ -109,22 +109,21 @@ main:
 					mov dl, 8
 					int 21h
 					jmp r_cycle2
-				r_continue4:
+				r_write_char:
 
 				mov ah, 02h
 				mov dl, 8
 
 				jmp r_cycle1
-			r_continue3:
+			r_check_minus:
 
-
-			jmp r_continue5
+			jmp r_continue
 				r_cycle1_a:
 				jmp r_cycle1
-			r_continue5:
+			r_continue:
 
 			cmp cl, '-'
-			jnz r_continue6
+			jnz r_check_enter
 				cmp bx, 0
 				jnz r_cycle1
 					mov ah, 02h
@@ -133,17 +132,17 @@ main:
 					inc bx
 					mov si, 1
 					jmp r_cycle1
-			r_continue6:
+			r_check_enter:
 
 			cmp cl, 13
-			jnz r_continue7
+			jnz r_check_some
 				cmp bx, 0
-				jz r_continue7
+				jz r_check_some
 				cmp bx, 1
 				jnz r_enter_pressed
 				cmp si, 0
 				jz r_enter_pressed
-			r_continue7:
+			r_check_some:
 
 			cmp si, 0
 			jnz r_continue8
@@ -171,32 +170,32 @@ main:
 			mov dx, 0
 
 			mul ten
-			jnc r_continue10
+			jnc r_check_sign
 				div ten
 				push ax
 				jmp r_cycle1_a
-			r_continue10:
+			r_check_sign:
 
 			test ax, 8000h
-			jz r_continue11
+			jz r_add_num
 				div ten
 				push ax
 				jmp r_cycle1_a
-			r_continue11:
+			r_add_num:
 
 			add ax, cx
 			test ax, 8000h
-			jz r_continue12
+			jz finish
 				cmp si, 0
-				jz r_continue13
+				jz r_if_positive
 					cmp ax, 8000h
-					jz r_continue12
-				r_continue13:
+					jz finish
+				r_if_positive:
 					sub ax, cx
 					div ten
 					push ax
 					jmp r_cycle1_a
-			r_continue12:
+			finish:
 
 			push ax
 
@@ -269,12 +268,12 @@ main:
 			mov ax, bx
 			call write_signed_num
 
-			jmp continue
+			jmp r_finish
 		if0:
 			mov ah, 09h
 			lea dx, err
 			int 21h
-		continue:
+		r_finish:
 
 		mov ax, 4c00h
 		int 21h
