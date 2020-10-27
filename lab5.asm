@@ -1,6 +1,8 @@
 .model small
 .stack 100h
 .data
+    ten dw 10
+
     tile_w db 10
     h db 20
     w db 32
@@ -8,7 +10,6 @@
     total_w dw 320
     total_size dw 640
     arr db 640 dup (?)
-    delay dw 40
     start_len db 7
     
     max_len db 17
@@ -32,10 +33,11 @@
     new_dir2 db 0
     snake2_x db 18 dup (?)
     snake2_y db 18 dup (?)
-    
     candy_x db ?
     candy_y db ?
     
+    ticks db 0
+    delay db 10
     
     bgr db 08h
     sb1 db 20h
@@ -67,7 +69,12 @@
     
     thnd dw 1000
     
+    old_int_1ch dd 00
+    
     file_name db 'lab5_log',0
+    
+    esc_pressed db 0
+    wait_new_game db 0
 .code
 main:
     mov ax, @data
@@ -78,35 +85,122 @@ main:
     mov al, 13h
     int 10h
     
-    mov ah, 0bh 
+    mov ah, 0bh
     mov bh, 00h
     mov bl, 00h
     int 10h
     
     call randomize
     
-    
-    
+
     call file_read
-    call timer_reset
+    call build_arr
+    
+    call set_my_handler
     
     cycle:
+        cmp esc_pressed, 1
+        jne cycle
     
-        call build_arr
+    call set_sys_handler
+    
+    call file_write
+    
+    mov ah, 00h
+    mov al, 13h
+    int 10h
+    
+    mov ax, 4c00h
+    int 21h
+    
+    set_my_handler proc
+        mov ax,351ch
+        int 21h
+        mov word ptr old_int_1ch,bx
+        mov word ptr old_int_1ch+2,es
         
-        call display_arr
+        push ds
+        mov ax, 251ch
+        mov dx, @code
+        mov ds, dx
+        mov dx,offset my_int_1ch
+        int 21h
+        pop ds
         
-        call timer_wait
-        call timer_reset
+        ret
+    set_my_handler endp
+        
+    set_sys_handler proc
+        push ds
+        mov ax,251ch
+        mov dx,word ptr old_int_1ch
+        mov bx,word ptr old_int_1ch+2
+        mov ds,bx
+        int 21h
+        pop ds
+        
+        ret
+    set_sys_handler endp
+    
+    my_int_1ch proc
+        cli
+        
+        inc ticks
+        mov al, ticks
+        cmp al, delay
+        je update_all
+            sti
+            iret
+        update_all:
+        mov ticks, 0
+        
+        cmp wait_new_game, 1
+        jne not_wait
+            call check_new_game
+            sti
+            iret
+        not_wait:
         
         call update_dirs
         call update_snakes
         call check_collision
-        
         call check_lose
         
+        cmp wait_new_game, 1
+        je not_display
+            call build_arr
+            call display_arr
+        not_display:
         
-    jmp cycle
+        sti
+        iret
+    my_int_1ch endp
+    
+    check_new_game proc
+        mov ah, 01h
+        int 16h
+        jz check_new_game_continue
+        
+        mov ah, 00h
+        int 16h
+        
+        cmp ah, 1ch
+        je key_space
+        
+        cmp ah,01h
+        je key_esc2
+        
+        check_new_game_continue:
+        ret
+        
+        key_space:
+            mov wait_new_game, 0
+            call build_arr
+            ret
+        key_esc2:
+            mov esc_pressed, 1
+            ret
+    check_new_game endp
     
     randomize proc
         mov ah, 2ch
@@ -156,6 +250,8 @@ main:
         mov lose1, 0
         mov lose2, 0
         
+        call build_arr
+        
         ret
     file_read endp
     
@@ -169,36 +265,33 @@ main:
         mov dir2, 0
         mov new_dir2, 0
         
-        cld
+        mov si, 0
         mov ch, 0
+        mov cl, len1
+        new_game_cycle:
         
-        mov cl, start_len
-        lea si, start_snake1_x
-        lea di, snake1_x
-        rep movsb
+            mov al, start_snake1_x[si]
+            mov snake1_x[si], al
+            
+            mov al, start_snake1_y[si]
+            mov snake1_y[si], al
+            
+            mov al, start_snake2_x[si]
+            mov snake2_x[si], al
+            
+            mov al, start_snake2_y[si]
+            mov snake2_y[si], al
+            
+            inc si
+            
+        loop new_game_cycle
         
-        mov cl, start_len
-        lea si, start_snake1_y
-        lea di, snake1_y
-        rep movsb
-        
-        mov cl, start_len
-        lea si, start_snake2_x
-        lea di, snake2_x
-        rep movsb
-        
-        mov cl, start_len
-        lea si, start_snake2_y
-        lea di, snake2_y
-        rep movsb
-        
+        call build_arr
         call new_candy
         ret
     new_game endp
     
     check_lose proc
-        
-    
         cmp lose1, 1
         jne check_continue1
             cmp lose2, 1
@@ -220,7 +313,8 @@ main:
                 call fill_rect
                 
                 call new_game
-                call wait_space
+                mov wait_new_game, 1
+                ret
         check_continue1:
         
         cmp lose1, 1
@@ -233,7 +327,8 @@ main:
             mov rect_color, al
             call fill_rect
             call new_game
-            call wait_space
+            mov wait_new_game, 1
+            ret
         check_continue2:
             
         cmp lose2, 1
@@ -246,21 +341,11 @@ main:
             mov rect_color, al
             call fill_rect
             call new_game
-            call wait_space
+            mov wait_new_game, 1
+            ret
         check_continue3:
         ret
     check_lose endp
-    
-    wait_space proc
-        push ax
-        wait_cycle:
-            mov ah, 08h
-            int 21h
-            cmp al, ' '
-            jne wait_cycle
-        pop ax
-        ret
-    wait_space endp
     
     new_candy proc
         push ax
@@ -429,16 +514,13 @@ main:
         mov cl, sh2
         call set_val
         
-        
-        
-        call display_arr
         ret
     build_arr endp
     
     check_collision proc
         mov ah, snake1_y
         mov al, snake1_x
-    
+        
         cmp ah, h
         jb check_lose_continue1
             mov lose1, 1
@@ -449,7 +531,8 @@ main:
             mov lose1, 1
         check_lose_continue2:
         
-        call get_val
+        call get_val ; -------------------maybe bug
+        
         cmp al, bgr
         je check_lose_continue3
             cmp al, cnd
@@ -599,47 +682,10 @@ main:
                 
             key_esc:
     
-            call file_write
-            call clear_arr
-            call display_arr
-            
-            mov ah, 00h
-            mov al, 13h
-            int 10h
-            
-            mov ax, 4c00h
-            int 21h
+                mov esc_pressed, 1
         update_dirs_continue:
         ret
     update_dirs endp
-    
-    timer_wait proc
-        push ax
-        
-        timer_wait_cycle:
-            call get_time
-            cmp ax, last_time
-            jnb wait_continue
-                add ax, 60000
-            wait_continue:
-            sub ax, last_time
-            cmp ax, delay
-            jb timer_wait_cycle
-            
-        pop ax
-        ret
-    timer_wait endp
-    
-    timer_reset proc
-        push ax
-        
-        call get_time
-        mov last_time, ax
-        
-        pop ax
-        
-        ret
-    timer_reset endp
     
     get_time proc
         push bx
@@ -669,6 +715,7 @@ main:
         push si
         push bx
     
+        mov bh, 0
         mov bl, al
         mov al, ah
         mov ah, 0
@@ -687,6 +734,7 @@ main:
         push si
         push bx
     
+        mov bh, 0
         mov bl, al
         mov al, ah
         mov ah, 0
@@ -705,11 +753,21 @@ main:
         push cx
         push di
         
-        cld
-        lea di, arr
-        mov cx, total_size
-        mov al, bgr
-        rep stosb
+        mov ch, 0
+        clear_label1:
+            mov cl, 0
+                clear_label2:
+                push cx
+                mov ax, cx
+                mov cl, bgr
+                call set_val
+                pop cx
+                inc cl
+                cmp cl, w
+                jne clear_label2
+            inc ch
+            cmp ch, h
+            jne clear_label1
         
         pop di
         pop cx
@@ -727,17 +785,16 @@ main:
         display_label1:
             mov cl, 0
             display_label2:
-                mov ah, 0
-                mov al, ch
-                mul w
-                add al, cl
-                mov si, ax
-            
-                mov ah, arr[si]
-                mov tile_color, ah
+                push cx
                 mov tile_x, cl
                 mov tile_y, ch
+                mov ax, cx
+                call get_val
+                mov tile_color, al
+                
                 call fill_tile
+                pop cx
+                
                 inc cl
                 cmp cl, w
                 jne display_label2
@@ -807,4 +864,43 @@ main:
         pop ax
         ret
     fill_rect endp
+    
+    
+    write_signed_num PROC
+        push cx
+        push dx
+
+        test ax, 8000h
+        jz w_go_to_cycle
+            neg ax
+            push ax
+            mov ah, 02h
+            mov dl, '-'
+            int 21h
+
+            pop ax
+        w_go_to_cycle:
+
+        mov cx, 0
+        w_cycle1:
+            mov dx, 0
+            div ten
+            push dx
+            inc cx
+            cmp ax, 0
+            jnz w_cycle1
+
+        w_cycle2:
+            mov ah, 02h
+            pop dx
+            add dx, '0'
+            int 21h
+            dec cx
+            cmp cx, 0
+            jnz w_cycle2
+
+        pop dx
+        pop cx
+        ret
+    write_signed_num ENDP
 end main
