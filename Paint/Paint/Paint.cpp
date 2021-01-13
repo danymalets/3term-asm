@@ -26,7 +26,29 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void OnLButtonDown(int x, int y);
 void OnLButtonUp(int x, int y);
 void OnMouseMove(int x, int y);
-void GFill(HDC hdc, int x, int y);
+
+void Line(int x1, int y1, int x2, int y2, COLORREF color, int width, bool needMem);
+void Ellipse(int x1, int y1, int x2, int y2, COLORREF color, int width, bool needMem);
+void Rect(int x1, int y1, int x2, int y2, COLORREF color, int width, bool needMem);
+void Fill(int x, int y, COLORREF color, bool needMem);
+void GFill(int x, int y, bool needMem);
+
+enum class ACTIONTYPE {
+    LINE,
+    ELLIPSE,
+    FILL,
+    GFILL,
+    RECT
+};
+
+struct action {
+    ACTIONTYPE type;
+    INT x1, y1, x2, y2;
+    COLORREF color;
+    INT width;
+};
+
+vector<action> actions;
 
 enum class MODES {
     PEN,
@@ -39,10 +61,6 @@ enum class MODES {
 MODES mode = MODES::PEN;
 COLORREF color = RGB(0, 0, 0);
 int width = 3;
-
-struct LINE {
-    INT x1, y1, x2, y2;
-};
 
 bool mouse_down = false;
 POINT ptPr;
@@ -166,17 +184,37 @@ int CALLBACK WinMain(
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT ps;
-    HDC hdct;
+    HDC hdc;
     TCHAR greeting[] = _T("Hello, Windows desktop!");
 
     switch (message)
     {
     case WM_PAINT:
-        hdct = BeginPaint(hWnd, &ps);
-
-        hdct = hdc;
-
+        hdc = BeginPaint(hWnd, &ps);
         EndPaint(hWnd, &ps);
+
+        for (int i = 0; i < actions.size(); i++) {
+            action act = actions[i];
+            switch (act.type) {
+            case ACTIONTYPE::LINE:
+                Line(act.x1, act.y1, act.x2, act.y2, act.color, act.width, false);
+                break;
+            case ACTIONTYPE::ELLIPSE:
+                Ellipse(act.x1, act.y1, act.x2, act.y2, act.color, act.width, false);
+                break;
+            case ACTIONTYPE::RECT:
+                Rect(act.x1, act.y1, act.x2, act.y2, act.color, act.width, false);
+                break;
+            case ACTIONTYPE::FILL:
+                Fill(act.x1, act.y1, act.color, false);
+                break;
+            case ACTIONTYPE::GFILL:
+                GFill(act.x1, act.y1, false);
+                break;
+            default:
+                break;
+            }
+        }
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -289,6 +327,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         if (LOWORD(wParam) == ID_BUTTON_1) {
+            actions.clear();
             InvalidateRect(hWnd, NULL, TRUE);
         }
         break;
@@ -304,7 +343,7 @@ void OnLButtonDown(int x, int y)
     switch (mode) {
     case MODES::PEN:
     {
-        mouse_down = TRUE;
+        mouse_down = true;
         ptPr.x = x;
         ptPr.y = y;
         return;
@@ -318,12 +357,7 @@ void OnLButtonDown(int x, int y)
     }
     case MODES::FILL:
     {
-        HDC hdc = GetDC(hwnd);
-        HBRUSH br = CreateSolidBrush(color);
-        SelectObject(hdc, br);
-        ExtFloodFill(hdc, x, y, GetPixel(hdc, x, y), FLOODFILLSURFACE);
-        DeleteObject(br);
-        ReleaseDC(hwnd, hdc);
+        Fill(x, y, color, true);
         return;
     }
     case MODES::GRADIENT:
@@ -355,13 +389,9 @@ void OnLButtonUp(int x, int y)
     case MODES::PEN:
     {
         if (mouse_down) {
-            HDC hdc = GetDC(hwnd);
-            HPEN pen = CreatePen(PS_SOLID, width, color);
-            SelectObject(hdc, pen);
-            MoveToEx(hdc, ptPr.x, ptPr.y, NULL);
-            LineTo(hdc, ptPr.x = x, ptPr.y = y);
-            DeleteObject(pen);
-            ReleaseDC(hwnd, hdc);
+            int x1 = ptPr.x, y1 = ptPr.y;
+            ptPr.x = x; ptPr.y = y;
+            Line(x1, y1, x, y, color, width, true);
         }
         mouse_down = false;
         return;
@@ -369,13 +399,9 @@ void OnLButtonUp(int x, int y)
     case MODES::ERASER:
     {
         if (mouse_down) {
-            HDC hdc = GetDC(hwnd);
-            HPEN pen = CreatePen(PS_SOLID, width, RGB(255,255,255));
-            SelectObject(hdc, pen);
-            MoveToEx(hdc, ptPr.x, ptPr.y, NULL);
-            LineTo(hdc, ptPr.x = x, ptPr.y = y);
-            DeleteObject(pen);
-            ReleaseDC(hwnd, hdc);
+            int x1 = ptPr.x, y1 = ptPr.y;
+            ptPr.x = x; ptPr.y = y;
+            Line(x1, y1, x, y, RGB(255, 255, 255), width, true);
         }
         mouse_down = false;
         return;
@@ -386,33 +412,29 @@ void OnLButtonUp(int x, int y)
     }
     case MODES::GRADIENT:
     {
-        HDC hdc = GetDC(hwnd);
-        GFill(hdc, x, y);
-        ReleaseDC(hwnd, hdc);
+        GFill(x, y, true);
         return;
     }
     case MODES::ELLIPSE:
     {
-        HDC hdc = GetDC(hwnd);
-        HPEN pen = CreatePen(PS_SOLID, width, color);
-        SelectObject(hdc, pen);
         int dx = abs(x - ptPr.x);
         int dy = abs(y - ptPr.y);
-        Ellipse(hdc, ptPr.x - dx, ptPr.y - dy, ptPr.x + dx, ptPr.y + dy);
-        DeleteObject(pen);
-        ReleaseDC(hwnd, hdc);
+        int x1 = ptPr.x - dx;
+        int y1 = ptPr.y - dy;
+        int x2 = ptPr.x + dx;
+        int y2 = ptPr.y + dx;
+        Ellipse(x1, y1, x2, y2, color, width, true);
         return;
     }
     case MODES::RECT:
     {
-        HDC hdc = GetDC(hwnd);
-        HPEN pen = CreatePen(PS_SOLID, width, color);
-        SelectObject(hdc, pen);
         int dx = abs(x - ptPr.x);
         int dy = abs(y - ptPr.y);
-        Rectangle(hdc, ptPr.x - dx, ptPr.y - dy, ptPr.x + dx, ptPr.y + dy);
-        DeleteObject(pen);
-        ReleaseDC(hwnd, hdc);
+        int x1 = ptPr.x - dx;
+        int y1 = ptPr.y - dy;
+        int x2 = ptPr.x + dx;
+        int y2 = ptPr.y + dx;
+        Rect(x1, y1, x2, y2, color, width, true);
         return;
     }
     default:
@@ -427,13 +449,9 @@ void OnMouseMove(int x, int y)
     {
         if (mouse_down)
         {
-            HDC hdc = GetDC(hwnd);
-            HPEN pen = CreatePen(PS_SOLID, width, color);
-            SelectObject(hdc, pen);
-            MoveToEx(hdc, ptPr.x, ptPr.y, NULL);
-            LineTo(hdc, ptPr.x = x, ptPr.y = y);
-            DeleteObject(pen);
-            ReleaseDC(hwnd, hdc);
+            int x1 = ptPr.x, y1 = ptPr.y;
+            ptPr.x = x; ptPr.y = y;
+            Line(x1, y1, x, y, color, width, true);
         }
         return;
     }
@@ -441,13 +459,9 @@ void OnMouseMove(int x, int y)
     {
         if (mouse_down)
         {
-            HDC hdc = GetDC(hwnd);
-            HPEN pen = CreatePen(PS_SOLID, width, RGB(255, 255, 255));
-            SelectObject(hdc, pen);
-            MoveToEx(hdc, ptPr.x, ptPr.y, NULL);
-            LineTo(hdc, ptPr.x = x, ptPr.y = y);
-            DeleteObject(pen);
-            ReleaseDC(hwnd, hdc);
+            int x1 = ptPr.x, y1 = ptPr.y;
+            ptPr.x = x; ptPr.y = y;
+            Line(x1, y1, x, y, RGB(255, 255, 255), width, true);
         }
         return;
     }
@@ -472,14 +486,58 @@ void OnMouseMove(int x, int y)
     }
 }
 
-void GFill(HDC hdc, int x, int y)
+void Line(int x1, int y1, int x2, int y2, COLORREF color, int width, bool needMem) {
+    if (needMem) actions.push_back({ ACTIONTYPE::LINE, x1, y1, x2, y2, color, width });
+    HDC hdc = GetDC(hwnd);
+    HPEN pen = CreatePen(PS_SOLID, width, color);
+    SelectObject(hdc, pen);
+    MoveToEx(hdc, x1, y1, NULL);
+    LineTo(hdc, x2, y2);
+    DeleteObject(pen);
+    ReleaseDC(hwnd, hdc);
+}
+
+void Ellipse(int x1, int y1, int x2, int y2, COLORREF color, int width, bool needMem) {
+    if (needMem) actions.push_back({ ACTIONTYPE::ELLIPSE, x1, y1, x2, y2, color, width });
+    HDC hdc = GetDC(hwnd);
+    HPEN pen = CreatePen(PS_SOLID, width, color);
+    SelectObject(hdc, pen);
+    Ellipse(hdc, x1, y1, x2, y2);
+    DeleteObject(pen);
+    ReleaseDC(hwnd, hdc);
+}
+
+void Rect(int x1, int y1, int x2, int y2, COLORREF color, int width, bool needMem) {
+    if (needMem) actions.push_back({ ACTIONTYPE::RECT, x1, y1, x2, y2, color, width });
+    HDC hdc = GetDC(hwnd);
+    HPEN pen = CreatePen(PS_SOLID, width, color);
+    SelectObject(hdc, pen);
+    Rectangle(hdc, x1, y1, x2, y2);
+    DeleteObject(pen);
+    ReleaseDC(hwnd, hdc);
+}
+
+void Fill(int x, int y, COLORREF color, bool needMem) {
+    if (needMem) actions.push_back({ ACTIONTYPE::FILL, x, y, -1, -1, color, -1 });
+    HDC hdc = GetDC(hwnd);
+    HBRUSH br = CreateSolidBrush(color);
+    SelectObject(hdc, br);
+    ExtFloodFill(hdc, x, y, GetPixel(hdc, x, y), FLOODFILLSURFACE);
+    DeleteObject(br);
+    ReleaseDC(hwnd, hdc);
+}
+
+void GFill(int x, int y, bool needMem)
 {
+    if (needMem) actions.push_back({ ACTIONTYPE::GFILL, x, y, -1, -1, RGB(0, 0, 0), -1 });
+    HDC hdc = GetDC(hwnd);
     int sx = x, sy = y;
     COLORREF old_color = GetPixel(hdc, x, y);
     queue< pair<int,int> > q;
     q.push({ x,y });
     while (!q.empty()) 
     {
+        //
         pair<int, int> p = q.front(); q.pop();
         x = p.first; y = p.second;
         if (x < 0 || x >= x_size) continue;
@@ -488,11 +546,18 @@ void GFill(HDC hdc, int x, int y)
         if (tmp_color == old_color) {
             int t = abs((x - y) - (sx - sy)) % (52 + 51);
             if (t > 51) t = 51 * 2 - t;
-            SetPixel(hdc, x, y, RGB(0, t * 5, 255 - t * 5));
+            INT r = 0;
+            INT g = t * 5;
+            INT b = 255 - t * 5;
+            //
+            SetPixel(hdc, x, y, RGB(r, g, b));
+            //
             q.push({ x-1,y });
             q.push({ x,y-1 });
             q.push({ x+1,y });
             q.push({ x,y+1 });
         }
+        //
     }
+    ReleaseDC(hwnd, hdc);
 }
